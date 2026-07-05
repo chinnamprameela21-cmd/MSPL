@@ -8,7 +8,7 @@ dotenv.config();
 
 async function startServer() {
   const app = express();
-  const PORT = process.env.PORT ? Number(process.env.PORT) : 3000;
+  const PORT = process.env.PORT || 8080;
 
   // Body parser
   app.use(express.json());
@@ -99,58 +99,29 @@ async function startServer() {
   });
 
   // ============================================================
-  // FIXED: Serve static files with correct path resolution
+  // SIMPLIFIED: Serve static files
   // ============================================================
 
-  // Get the correct dist path - Railway uses /app as working directory
-  const distPath = path.resolve(process.cwd(), 'dist');
+  const distPath = path.join(process.cwd(), 'dist');
   console.log(`📁 Serving static files from: ${distPath}`);
 
-  // Check if dist folder exists and log contents
-  try {
-    if (fs.existsSync(distPath)) {
-      const files = fs.readdirSync(distPath);
-      console.log(`📄 Found ${files.length} files in dist:`);
-      files.slice(0, 10).forEach(f => console.log(`  - ${f}`));
-      if (files.length > 10) console.log(`  ... and ${files.length - 10} more`);
-    } else {
-      console.error(`❌ ERROR: dist folder not found at ${distPath}`);
-    }
-  } catch (err) {
-    console.error(`❌ Error reading dist: ${err.message}`);
-  }
+  // Serve static files
+  app.use(express.static(distPath));
 
-  // Serve static files with proper options
-  app.use(express.static(distPath, {
-    maxAge: '1d',
-    etag: true,
-    lastModified: true
-  }));
-
-  // Handle SPA routing - ALL non-API routes go to index.html
+  // For all routes, serve index.html
   app.get('*', (req, res) => {
-    // Skip API routes
-    if (req.path.startsWith('/api/')) {
-      return res.status(404).json({ error: 'API endpoint not found' });
-    }
-
     const indexPath = path.join(distPath, 'index.html');
     if (fs.existsSync(indexPath)) {
       res.sendFile(indexPath);
     } else {
-      res.status(404).send(`
-        <h1>404 - File Not Found</h1>
-        <p>index.html not found in dist folder.</p>
-        <p>Current directory: ${process.cwd()}</p>
-        <p>Dist path: ${distPath}</p>
-      `);
+      res.status(404).send('index.html not found');
     }
   });
 
   // Start server
-  app.listen(PORT, "0.0.0.0", () => {
-    console.log(`[Magnifiq Engine] Full-stack server active at http://localhost:${PORT}`);
-    console.log(`🌐 Public URL: https://msp1.up.railway.app`);
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`[Magnifiq Engine] Server running on port ${PORT}`);
+    console.log(`🌐 URL: https://msp1.up.railway.app`);
   });
 }
 
