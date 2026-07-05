@@ -1,9 +1,15 @@
 import express from "express";
 import path from "path";
+import { fileURLToPath } from 'url';
 import { GoogleGenAI } from "@google/genai";
 import * as dotenv from "dotenv";
+import fs from 'fs';
 
 dotenv.config();
+
+// Get __dirname equivalent in ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 async function startServer() {
   const app = express();
@@ -27,7 +33,6 @@ async function startServer() {
       }
 
       if (!apiKey) {
-        // Safe placeholder fallback response when API key is not configured in Settings > Secrets
         const mockResponses: { [key: string]: string } = {
           "capabilities": "As **Magnifiq AI Advisor**, I stand ready to assist! Magnifiq Services Private Limited (formerly Tel Tower Private Limited) is leading telco towers and high-density PV solar grid installations. Live inventory holds structural modules, diesel generators, and 5G transceiver bands. You can customize shift assignments, coordinate optical fiber trenching, or authorize GPX-verified attendance logs.",
           "rfp": "### Turnkey 10-Tower Erection Proposal Draft\n\n**Prepared For:** Client Procurement Matrix\n**Prepared By:** Magnifiq Services Private Limited Engineering Division\n\n1. **Engineering Scope:** Supply, rigging, and certified foundation engineering for 10 structural lattice telecom towers.\n2. **Compliance Key:** 100% Guntur-monitored GPS clock-in telemetry to guarantee zero-spoof labor audit records.\n3. **Inventory Allocations:** 10 lattice tower kits, 10 backup heavy fuel diesel generators, and fiber patch panel junctions.\n\n*Activate your live `GEMINI_API_KEY` inside Settings > Secrets to unlock custom model-driven automatic estimates based on actual live items.*",
@@ -48,7 +53,6 @@ async function startServer() {
         });
       }
 
-      // Live instance with User-Agent set for AI Studio build standards
       const ai = new GoogleGenAI({
         apiKey: apiKey,
         httpOptions: {
@@ -58,7 +62,6 @@ async function startServer() {
         },
       });
 
-      // Assemble system instruction with business metadata to offer personalized advising
       const systemInstruction = 
         `You are Magnifiq AI Advisor, a super-intelligent engineering, logistics, and HR agent for Magnifiq Services Private Limited (formerly known as Tel Towers Private Limited).\n` +
         `Your headquarters are based in Hyderabad, Telangana, India.\n` +
@@ -70,7 +73,6 @@ async function startServer() {
         `- Active Regional Projects: ${context.projectsCount || "turnkey installations"}\n\n` +
         `Provide authoritative, clear engineering and HR insights. Format your output using elegant Markdown with bold key terms, tables, or bullet points. Avoid clinical system telemetry references; remain polite, human, and professional.`;
 
-      // Query Gemini model gemini-3.5-flash
       const response = await ai.models.generateContent({
         model: "gemini-3.5-flash",
         contents: [
@@ -101,24 +103,39 @@ async function startServer() {
     }
   });
 
-  // Serve static files in production / Vite middleware in development
-  if (process.env.NODE_ENV !== "production") {
-    const { createServer: createViteServer } = await import("vite");
-    const vite = await createViteServer({
-      server: { middlewareMode: true },
-      appType: "spa",
-    });
-    app.use(vite.middlewares);
-  } else {
-    const distPath = path.join(process.cwd(), "dist");
-    app.use(express.static(distPath));
-    app.get("*", (req, res) => {
-      res.sendFile(path.join(distPath, "index.html"));
-    });
+  // ============================================================
+  // FIXED: Serve static files in production
+  // ============================================================
+  const distPath = path.join(__dirname, "dist");
+  console.log(`📁 Serving static files from: ${distPath}`);
+
+  // Check if dist folder exists
+  if (!fs.existsSync(distPath)) {
+    console.error(`❌ ERROR: dist folder not found at ${distPath}`);
+    console.log("🛠️ Please run 'npm run build' first");
   }
 
+  // Serve static files
+  app.use(express.static(distPath));
+
+  // For any route not handled by API or static files, serve index.html
+  app.get("*", (req, res) => {
+    const indexPath = path.join(distPath, "index.html");
+    if (fs.existsSync(indexPath)) {
+      res.sendFile(indexPath);
+    } else {
+      res.status(404).send(`
+        <h1>404 - File Not Found</h1>
+        <p>index.html not found in dist folder.</p>
+        <p>Please rebuild your application with <code>npm run build</code></p>
+      `);
+    }
+  });
+
+  // Start server
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`[Magnifiq Engine] Full-stack server active at http://localhost:${PORT}`);
+    console.log(`🌐 Public URL: https://msp1.up.railway.app`);
   });
 }
 
