@@ -44,9 +44,9 @@ async function startServer() {
       }
       if (!apiKey) {
         const mockResponses = {
-          "capabilities": "As **Magnifiq AI Advisor**, I stand ready to assist! Magnifiq Services Private Limited (formerly Tel Tower Private Limited) is leading telco towers and high-density PV solar grid installations. Live inventory holds structural modules, diesel generators, and 5G transceiver bands. You can customize shift assignments, coordinate optical fiber trenching, or authorize GPX-verified attendance logs.",
-          "rfp": "### Turnkey 10-Tower Erection Proposal Draft\n\n**Prepared For:** Client Procurement Matrix\n**Prepared By:** Magnifiq Services Private Limited Engineering Division\n\n1. **Engineering Scope:** Supply, rigging, and certified foundation engineering for 10 structural lattice telecom towers.\n2. **Compliance Key:** 100% Guntur-monitored GPS clock-in telemetry to guarantee zero-spoof labor audit records.\n3. **Inventory Allocations:** 10 lattice tower kits, 10 backup heavy fuel diesel generators, and fiber patch panel junctions.\n\n*Activate your live `GEMINI_API_KEY` inside Settings > Secrets to unlock custom model-driven automatic estimates based on actual live items.*",
-          "default": "Greetings! I am the **Magnifiq AI Advisor**. In order to connect this to real-time Gemini intelligence, please add your `GEMINI_API_KEY` in the **Settings > Secrets** panel in AI Studio.\n\nOnce configured, I can instantly query inventory status, draft custom RFP bids, formulate employee shift rosters, and optimize diesel generator consumption ratios live!"
+          capabilities: "As **Magnifiq AI Advisor**, I stand ready to assist! Magnifiq Services Private Limited (formerly Tel Tower Private Limited) is leading telco towers and high-density PV solar grid installations. Live inventory holds structural modules, diesel generators, and 5G transceiver bands. You can customize shift assignments, coordinate optical fiber trenching, or authorize GPX-verified attendance logs.",
+          rfp: "### Turnkey 10-Tower Erection Proposal Draft\n\n**Prepared For:** Client Procurement Matrix\n**Prepared By:** Magnifiq Services Private Limited Engineering Division\n\n1. **Engineering Scope:** Supply, rigging, and certified foundation engineering for 10 structural lattice telecom towers.\n2. **Compliance Key:** 100% Guntur-monitored GPS clock-in telemetry to guarantee zero-spoof labor audit records.\n3. **Inventory Allocations:** 10 lattice tower kits, 10 backup heavy fuel diesel generators, and fiber patch panel junctions.\n\n*Activate your live `GEMINI_API_KEY` inside Settings > Secrets to unlock custom model-driven automatic estimates based on actual live items.*",
+          default: "Greetings! I am the **Magnifiq AI Advisor**. In order to connect this to real-time Gemini intelligence, please add your `GEMINI_API_KEY` in the **Settings > Secrets** panel in AI Studio.\n\nOnce configured, I can instantly query inventory status, draft custom RFP bids, formulate employee shift rosters, and optimize diesel generator consumption ratios live!"
         };
         let pickedResp = mockResponses.default;
         const lowerPrompt = prompt.toLowerCase();
@@ -113,24 +113,16 @@ Provide authoritative, clear engineering and HR insights. Format your output usi
     process.exit(1);
   }
   app.use(import_express.default.static(distPath));
-  app.get("/", (req, res) => {
-    const indexPath = import_path.default.join(distPath, "index.html");
-    console.log(`\u{1F4C4} Serving index.html from: ${indexPath}`);
-    if (import_fs.default.existsSync(indexPath)) {
-      res.sendFile(indexPath);
-    } else {
-      res.status(500).send("index.html not found");
-    }
-  });
-  app.get("*", (req, res) => {
+  app.all("*", (req, res) => {
     if (req.path.startsWith("/api/")) {
       return res.status(404).json({ error: "API endpoint not found" });
     }
     const indexPath = import_path.default.join(distPath, "index.html");
+    console.log(`\u{1F4C4} Serving: ${req.path} -> ${indexPath}`);
     if (import_fs.default.existsSync(indexPath)) {
       res.sendFile(indexPath);
     } else {
-      res.status(500).send("index.html not found");
+      res.status(500).send(`index.html not found at ${indexPath}`);
     }
   });
   app.listen(PORT, "0.0.0.0", () => {
@@ -138,8 +130,5 @@ Provide authoritative, clear engineering and HR insights. Format your output usi
     console.log(`\u{1F310} Visit: https://msp1.up.railway.app`);
   });
 }
-startServer().catch((err) => {
-  console.error("Fatal error:", err);
-  process.exit(1);
-});
+startServer();
 //# sourceMappingURL=server.cjs.map
