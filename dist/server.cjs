@@ -30,7 +30,7 @@ var import_fs = __toESM(require("fs"), 1);
 dotenv.config();
 async function startServer() {
   const app = (0, import_express.default)();
-  const PORT = process.env.PORT ? Number(process.env.PORT) : 3e3;
+  const PORT = process.env.PORT || 8080;
   app.use(import_express.default.json());
   app.post("/api/gemini/advisor", async (req, res) => {
     try {
@@ -106,45 +106,28 @@ Provide authoritative, clear engineering and HR insights. Format your output usi
       });
     }
   });
-  const distPath = import_path.default.resolve(process.cwd(), "dist");
+  const distPath = import_path.default.join(process.cwd(), "dist");
   console.log(`\u{1F4C1} Serving static files from: ${distPath}`);
-  try {
-    if (import_fs.default.existsSync(distPath)) {
-      const files = import_fs.default.readdirSync(distPath);
-      console.log(`\u{1F4C4} Found ${files.length} files in dist:`);
-      files.slice(0, 10).forEach((f) => console.log(`  - ${f}`));
-      if (files.length > 10) console.log(`  ... and ${files.length - 10} more`);
-    } else {
-      console.error(`\u274C ERROR: dist folder not found at ${distPath}`);
-    }
-  } catch (err) {
-    console.error(`\u274C Error reading dist: ${err.message}`);
+  if (!import_fs.default.existsSync(distPath)) {
+    console.error(`\u274C ERROR: dist folder not found at ${distPath}`);
+    process.exit(1);
   }
-  app.use(import_express.default.static(distPath, {
-    maxAge: "1d",
-    etag: true,
-    lastModified: true
-  }));
+  app.use(import_express.default.static(distPath));
   app.get("*", (req, res) => {
-    if (req.path.startsWith("/api/")) {
-      return res.status(404).json({ error: "API endpoint not found" });
-    }
     const indexPath = import_path.default.join(distPath, "index.html");
     if (import_fs.default.existsSync(indexPath)) {
       res.sendFile(indexPath);
     } else {
-      res.status(404).send(`
-        <h1>404 - File Not Found</h1>
-        <p>index.html not found in dist folder.</p>
-        <p>Current directory: ${process.cwd()}</p>
-        <p>Dist path: ${distPath}</p>
-      `);
+      res.status(500).send("Server configuration error: index.html not found");
     }
   });
   app.listen(PORT, "0.0.0.0", () => {
-    console.log(`[Magnifiq Engine] Full-stack server active at http://localhost:${PORT}`);
-    console.log(`\u{1F310} Public URL: https://msp1.up.railway.app`);
+    console.log(`\u2705 Server running on port ${PORT}`);
+    console.log(`\u{1F310} Visit: https://msp1.up.railway.app`);
   });
 }
-startServer();
+startServer().catch((err) => {
+  console.error("Fatal error:", err);
+  process.exit(1);
+});
 //# sourceMappingURL=server.cjs.map

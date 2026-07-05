@@ -99,30 +99,39 @@ async function startServer() {
   });
 
   // ============================================================
-  // SIMPLIFIED: Serve static files
+  // Serve static files with proper error handling
   // ============================================================
 
   const distPath = path.join(process.cwd(), 'dist');
   console.log(`📁 Serving static files from: ${distPath}`);
 
+  // Check if dist exists
+  if (!fs.existsSync(distPath)) {
+    console.error(`❌ ERROR: dist folder not found at ${distPath}`);
+    process.exit(1);
+  }
+
   // Serve static files
   app.use(express.static(distPath));
 
-  // For all routes, serve index.html
+  // For all routes, serve index.html (SPA support)
   app.get('*', (req, res) => {
     const indexPath = path.join(distPath, 'index.html');
     if (fs.existsSync(indexPath)) {
       res.sendFile(indexPath);
     } else {
-      res.status(404).send('index.html not found');
+      res.status(500).send('Server configuration error: index.html not found');
     }
   });
 
   // Start server
   app.listen(PORT, '0.0.0.0', () => {
-    console.log(`[Magnifiq Engine] Server running on port ${PORT}`);
-    console.log(`🌐 URL: https://msp1.up.railway.app`);
+    console.log(`✅ Server running on port ${PORT}`);
+    console.log(`🌐 Visit: https://msp1.up.railway.app`);
   });
 }
 
-startServer();
+startServer().catch(err => {
+  console.error('Fatal error:', err);
+  process.exit(1);
+});
