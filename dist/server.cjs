@@ -106,14 +106,29 @@ Provide authoritative, clear engineering and HR insights. Format your output usi
       });
     }
   });
-  const distPath = import_path.default.join(process.cwd(), "dist");
+  const distPath = import_path.default.resolve(process.cwd(), "dist");
   console.log(`\u{1F4C1} Serving static files from: ${distPath}`);
-  if (!import_fs.default.existsSync(distPath)) {
-    console.error(`\u274C ERROR: dist folder not found at ${distPath}`);
-    console.log("\u{1F6E0}\uFE0F Please run 'npm run build' first");
+  try {
+    if (import_fs.default.existsSync(distPath)) {
+      const files = import_fs.default.readdirSync(distPath);
+      console.log(`\u{1F4C4} Found ${files.length} files in dist:`);
+      files.slice(0, 10).forEach((f) => console.log(`  - ${f}`));
+      if (files.length > 10) console.log(`  ... and ${files.length - 10} more`);
+    } else {
+      console.error(`\u274C ERROR: dist folder not found at ${distPath}`);
+    }
+  } catch (err) {
+    console.error(`\u274C Error reading dist: ${err.message}`);
   }
-  app.use(import_express.default.static(distPath));
+  app.use(import_express.default.static(distPath, {
+    maxAge: "1d",
+    etag: true,
+    lastModified: true
+  }));
   app.get("*", (req, res) => {
+    if (req.path.startsWith("/api/")) {
+      return res.status(404).json({ error: "API endpoint not found" });
+    }
     const indexPath = import_path.default.join(distPath, "index.html");
     if (import_fs.default.existsSync(indexPath)) {
       res.sendFile(indexPath);
@@ -121,7 +136,8 @@ Provide authoritative, clear engineering and HR insights. Format your output usi
       res.status(404).send(`
         <h1>404 - File Not Found</h1>
         <p>index.html not found in dist folder.</p>
-        <p>Please rebuild your application with <code>npm run build</code></p>
+        <p>Current directory: ${process.cwd()}</p>
+        <p>Dist path: ${distPath}</p>
       `);
     }
   });

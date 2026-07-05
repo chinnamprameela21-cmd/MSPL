@@ -99,30 +99,50 @@ async function startServer() {
   });
 
   // ============================================================
-  // FIXED: Serve static files in production - Using process.cwd()
+  // FIXED: Serve static files with correct path resolution
   // ============================================================
-  const distPath = path.join(process.cwd(), "dist");
+
+  // Get the correct dist path - Railway uses /app as working directory
+  const distPath = path.resolve(process.cwd(), 'dist');
   console.log(`📁 Serving static files from: ${distPath}`);
 
-  // Check if dist folder exists
-  if (!fs.existsSync(distPath)) {
-    console.error(`❌ ERROR: dist folder not found at ${distPath}`);
-    console.log("🛠️ Please run 'npm run build' first");
+  // Check if dist folder exists and log contents
+  try {
+    if (fs.existsSync(distPath)) {
+      const files = fs.readdirSync(distPath);
+      console.log(`📄 Found ${files.length} files in dist:`);
+      files.slice(0, 10).forEach(f => console.log(`  - ${f}`));
+      if (files.length > 10) console.log(`  ... and ${files.length - 10} more`);
+    } else {
+      console.error(`❌ ERROR: dist folder not found at ${distPath}`);
+    }
+  } catch (err) {
+    console.error(`❌ Error reading dist: ${err.message}`);
   }
 
-  // Serve static files
-  app.use(express.static(distPath));
+  // Serve static files with proper options
+  app.use(express.static(distPath, {
+    maxAge: '1d',
+    etag: true,
+    lastModified: true
+  }));
 
-  // For any route not handled by API or static files, serve index.html
-  app.get("*", (req, res) => {
-    const indexPath = path.join(distPath, "index.html");
+  // Handle SPA routing - ALL non-API routes go to index.html
+  app.get('*', (req, res) => {
+    // Skip API routes
+    if (req.path.startsWith('/api/')) {
+      return res.status(404).json({ error: 'API endpoint not found' });
+    }
+
+    const indexPath = path.join(distPath, 'index.html');
     if (fs.existsSync(indexPath)) {
       res.sendFile(indexPath);
     } else {
       res.status(404).send(`
         <h1>404 - File Not Found</h1>
         <p>index.html not found in dist folder.</p>
-        <p>Please rebuild your application with <code>npm run build</code></p>
+        <p>Current directory: ${process.cwd()}</p>
+        <p>Dist path: ${distPath}</p>
       `);
     }
   });
