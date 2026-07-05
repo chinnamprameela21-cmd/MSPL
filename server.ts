@@ -111,16 +111,35 @@ async function startServer() {
     process.exit(1);
   }
 
-  // Serve static files
+  // Serve static files (CSS, JS, images from assets folder)
   app.use(express.static(distPath));
 
-  // For all routes, serve index.html (SPA support)
+  // ============================================================
+  // EXPLICIT ROUTE HANDLERS (Order matters!)
+  // ============================================================
+
+  // 1. Explicit root route - handles /
+  app.get('/', (req, res) => {
+    const indexPath = path.join(distPath, 'index.html');
+    console.log(`📄 Serving index.html from: ${indexPath}`);
+    if (fs.existsSync(indexPath)) {
+      res.sendFile(indexPath);
+    } else {
+      res.status(500).send('index.html not found');
+    }
+  });
+
+  // 2. Catch-all for all other routes (SPA support)
   app.get('*', (req, res) => {
+    // Skip API routes
+    if (req.path.startsWith('/api/')) {
+      return res.status(404).json({ error: 'API endpoint not found' });
+    }
     const indexPath = path.join(distPath, 'index.html');
     if (fs.existsSync(indexPath)) {
       res.sendFile(indexPath);
     } else {
-      res.status(500).send('Server configuration error: index.html not found');
+      res.status(500).send('index.html not found');
     }
   });
 

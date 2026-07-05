@@ -113,12 +113,24 @@ Provide authoritative, clear engineering and HR insights. Format your output usi
     process.exit(1);
   }
   app.use(import_express.default.static(distPath));
+  app.get("/", (req, res) => {
+    const indexPath = import_path.default.join(distPath, "index.html");
+    console.log(`\u{1F4C4} Serving index.html from: ${indexPath}`);
+    if (import_fs.default.existsSync(indexPath)) {
+      res.sendFile(indexPath);
+    } else {
+      res.status(500).send("index.html not found");
+    }
+  });
   app.get("*", (req, res) => {
+    if (req.path.startsWith("/api/")) {
+      return res.status(404).json({ error: "API endpoint not found" });
+    }
     const indexPath = import_path.default.join(distPath, "index.html");
     if (import_fs.default.existsSync(indexPath)) {
       res.sendFile(indexPath);
     } else {
-      res.status(500).send("Server configuration error: index.html not found");
+      res.status(500).send("index.html not found");
     }
   });
   app.listen(PORT, "0.0.0.0", () => {
