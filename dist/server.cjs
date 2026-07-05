@@ -26,6 +26,7 @@ var import_express = __toESM(require("express"), 1);
 var import_path = __toESM(require("path"), 1);
 var import_genai = require("@google/genai");
 var dotenv = __toESM(require("dotenv"), 1);
+var import_fs = __toESM(require("fs"), 1);
 dotenv.config();
 async function startServer() {
   const app = (0, import_express.default)();
@@ -105,22 +106,28 @@ Provide authoritative, clear engineering and HR insights. Format your output usi
       });
     }
   });
-  if (process.env.NODE_ENV !== "production") {
-    const { createServer: createViteServer } = await import("vite");
-    const vite = await createViteServer({
-      server: { middlewareMode: true },
-      appType: "spa"
-    });
-    app.use(vite.middlewares);
-  } else {
-    const distPath = import_path.default.join(process.cwd(), "dist");
-    app.use(import_express.default.static(distPath));
-    app.get("*", (req, res) => {
-      res.sendFile(import_path.default.join(distPath, "index.html"));
-    });
+  const distPath = import_path.default.join(process.cwd(), "dist");
+  console.log(`\u{1F4C1} Serving static files from: ${distPath}`);
+  if (!import_fs.default.existsSync(distPath)) {
+    console.error(`\u274C ERROR: dist folder not found at ${distPath}`);
+    console.log("\u{1F6E0}\uFE0F Please run 'npm run build' first");
   }
+  app.use(import_express.default.static(distPath));
+  app.get("*", (req, res) => {
+    const indexPath = import_path.default.join(distPath, "index.html");
+    if (import_fs.default.existsSync(indexPath)) {
+      res.sendFile(indexPath);
+    } else {
+      res.status(404).send(`
+        <h1>404 - File Not Found</h1>
+        <p>index.html not found in dist folder.</p>
+        <p>Please rebuild your application with <code>npm run build</code></p>
+      `);
+    }
+  });
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`[Magnifiq Engine] Full-stack server active at http://localhost:${PORT}`);
+    console.log(`\u{1F310} Public URL: https://msp1.up.railway.app`);
   });
 }
 startServer();
