@@ -145,6 +145,7 @@ export interface CareerPost {
   vacancies: number;
   fileName?: string;
   fileData?: string; // base64
+  fileUrl?: string; // remote storage URL
   mimeType?: string;
   postedAt: string;
   postedBy?: string;
