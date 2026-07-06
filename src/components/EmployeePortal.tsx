@@ -11,6 +11,7 @@ import {
   Eye, Trash2, Plus, LogOut, Trash, Clock, AlertCircle
 } from 'lucide-react';
 import { employeesService } from '../lib/firebaseService';
+import { preferencesService } from '../lib/firebasePreferencesService';
 import { generatePayslipPDF } from '../lib/pdfHelper';
 import CameraStream from './CameraStream';
 import DocumentViewer from './DocumentViewer';
@@ -88,16 +89,40 @@ export default function EmployeePortal({
   const [customDocLabel, setCustomDocLabel] = useState('');
   const [isAddingCustomDoc, setIsAddingCustomDoc] = useState(false);
 
-  // Recycle Bin State
-  const [recycleBin, setRecycleBin] = useState<RecycleBinItem[]>(() => {
-    const saved = localStorage.getItem('mspl_recycle_bin');
-    return saved ? JSON.parse(saved) : [];
-  });
+  // Recycle Bin State - Initialize from Firebase
+  const [recycleBin, setRecycleBin] = useState<RecycleBinItem[]>([]);
+  const [isLoadingRecycleBin, setIsLoadingRecycleBin] = useState(true);
 
-  // Hot Sync Recycle Bin
+  // Load Recycle Bin from Firebase on component mount
   useEffect(() => {
-    localStorage.setItem('mspl_recycle_bin', JSON.stringify(recycleBin));
-  }, [recycleBin]);
+    const loadRecycleBin = async () => {
+      try {
+        const bin = await preferencesService.getRecycleBin(employee.id);
+        setRecycleBin(bin);
+      } catch (error) {
+        console.error('Error loading recycle bin from Firebase:', error);
+        // Fallback to localStorage
+        const saved = localStorage.getItem('mspl_recycle_bin');
+        setRecycleBin(saved ? JSON.parse(saved) : []);
+      } finally {
+        setIsLoadingRecycleBin(false);
+      }
+    };
+    
+    loadRecycleBin();
+  }, [employee.id]);
+
+  // Sync Recycle Bin to Firebase
+  useEffect(() => {
+    if (!isLoadingRecycleBin && recycleBin.length >= 0) {
+      preferencesService.setRecycleBin(employee.id, recycleBin)
+        .catch(error => {
+          console.error('Error saving recycle bin to Firebase:', error);
+          // Fallback to localStorage
+          localStorage.setItem('mspl_recycle_bin', JSON.stringify(recycleBin));
+        });
+    }
+  }, [recycleBin, employee.id, isLoadingRecycleBin]);
 
   // Personal Payslip selection
   const employeePayslips = payslips.filter(p => p.employeeId.toUpperCase() === employee.id.toUpperCase());

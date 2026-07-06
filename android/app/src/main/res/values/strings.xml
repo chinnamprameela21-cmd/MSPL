@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Magnifiq Services</string>
+    <string name="title_activity_main">Magnifiq Services</string>
+    <string name="package_name">com.magnifiq.services</string>
+    <string name="custom_url_scheme">com.magnifiq.services</string>
+</resources>

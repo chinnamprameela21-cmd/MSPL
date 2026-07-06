@@ -12,6 +12,7 @@ import {
   UserCredential
 } from 'firebase/auth';
 import { auth } from '../lib/firebase';
+import { preferencesService } from '../lib/firebasePreferencesService';
 
 interface AuthContextType {
   user: User | null;
@@ -49,16 +50,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(currentUser);
       setLoading(false);
       
-      // Store user info in localStorage for fallback
-      if (currentUser) {
-        localStorage.setItem('mspl_firebase_user', JSON.stringify({
-          uid: currentUser.uid,
-          email: currentUser.email,
-          displayName: currentUser.displayName
-        }));
-      } else {
-        localStorage.removeItem('mspl_firebase_user');
-      }
+      // Firebase Auth handles persistence automatically
+      // No need to store in localStorage separately
     });
 
     return () => unsubscribe();
@@ -91,8 +84,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = async () => {
     try {
       setError(null);
+      // Clear Firebase preferences when logging out
+      if (user) {
+        await preferencesService.clearAllPreferences(user.uid);
+      }
       await firebaseSignOut(auth);
-      localStorage.removeItem('mspl_firebase_user');
     } catch (err: any) {
       const errorMessage = err?.message || 'Failed to sign out';
       setError(errorMessage);

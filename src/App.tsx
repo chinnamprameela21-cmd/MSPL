@@ -17,6 +17,7 @@ import {
   employeeQueriesService,
   bulkService
 } from './lib/firebaseService';
+import { preferencesService } from './lib/firebasePreferencesService';
 import CompanyLogo from './components/CompanyLogo';
 import ClientPortal from './components/ClientPortal';
 import logoAsset from './assets/images/magnifiq_logo_official_1779711238353.png';
@@ -105,69 +106,25 @@ export default function App() {
   const [terminalLogs, setTerminalLogs] = useState<string[]>([]);
   const [isTerminalLoading, setIsTerminalLoading] = useState(false);
 
-  // Core State Engine (Local Storage persistent falling back to robust seeds)
-  const [employees, setEmployees] = useState<Employee[]>(() => {
-    const saved = localStorage.getItem('mspl_employees');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch {}
-    }
-    return [
-      { id: 'MSPL-EMP-101', role: 'manager', name: 'Ajay Kumar', status: 'approved', registeredAt: '05/10/2016', phoneNumber: '9845012345', password: 'password123', leaveBalance: { casual: 6, sick: 9, annual: 12 } },
-      { id: 'MSPL-EMP-102', role: 'employee', name: 'Ramesh Shinde', status: 'approved', registeredAt: '05/12/2016', phoneNumber: '9440123456', password: 'password123', leaveBalance: { casual: 8, sick: 10, annual: 15 } },
-      { id: 'MSPL-EMP-150', role: 'employee', name: 'Suman Reddy', status: 'pending', registeredAt: '05/20/2016', phoneNumber: '9650012345', password: 'password123', leaveBalance: { casual: 8, sick: 10, annual: 15 } }
-    ];
-  });
+  // Core State Engine (Firebase persistent)
+  const [employees, setEmployees] = useState<Employee[]>([
+    { id: 'MSPL-EMP-101', role: 'manager', name: 'Ajay Kumar', status: 'approved', registeredAt: '05/10/2016', phoneNumber: '9845012345', password: 'password123', leaveBalance: { casual: 6, sick: 9, annual: 12 } },
+    { id: 'MSPL-EMP-102', role: 'employee', name: 'Ramesh Shinde', status: 'approved', registeredAt: '05/12/2016', phoneNumber: '9440123456', password: 'password123', leaveBalance: { casual: 8, sick: 10, annual: 15 } },
+    { id: 'MSPL-EMP-150', role: 'employee', name: 'Suman Reddy', status: 'pending', registeredAt: '05/20/2016', phoneNumber: '9650012345', password: 'password123', leaveBalance: { casual: 8, sick: 10, annual: 15 } }
+  ]);
 
-  const [inventory, setInventory] = useState<InventoryItem[]>(() => {
-    const saved = localStorage.getItem('mspl_inventory');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch {}
-    }
-    return INITIAL_INVENTORY;
-  });
+  const [inventory, setInventory] = useState<InventoryItem[]>(INITIAL_INVENTORY);
 
-  const [attendanceLogs, setAttendanceLogs] = useState<AttendanceLog[]>(() => {
-    const saved = localStorage.getItem('mspl_attendance_logs');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch {}
-    }
-    return [
-      { id: 'att-1', employeeId: 'MSPL-EMP-101', employeeName: 'Ajay Kumar', date: '2026-05-23', time: '09:12 AM', latitude: 16.3067, longitude: 80.4365, isManualOverride: false, selfieUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80' }
-    ];
-  });
+  const [attendanceLogs, setAttendanceLogs] = useState<AttendanceLog[]>([
+    { id: 'att-1', employeeId: 'MSPL-EMP-101', employeeName: 'Ajay Kumar', date: '2026-05-23', time: '09:12 AM', latitude: 16.3067, longitude: 80.4365, isManualOverride: false, selfieUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80' }
+  ]);
 
-  const [payslips, setPayslips] = useState<Payslip[]>(() => {
-    const saved = localStorage.getItem('mspl_payslips');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch {}
-    }
-    return [
-      { id: 'pay-101-MAY', employeeId: 'MSPL-EMP-101', monthYear: 'May 2026', basicSalary: 35000, allowances: 5000, deductions: 1200, netSalary: 38800, status: 'paid', deliveredAt: '05/23/2026 10:15 AM' }
-    ];
-  });
+  const [payslips, setPayslips] = useState<Payslip[]>([
+    { id: 'pay-101-MAY', employeeId: 'MSPL-EMP-101', monthYear: 'May 2026', basicSalary: 35000, allowances: 5000, deductions: 1200, netSalary: 38800, status: 'paid', deliveredAt: '05/23/2026 10:15 AM' }
+  ]);
 
   const [payslipFormat, setPayslipFormat] = useState<PayslipFormat>(() => {
-    const saved = localStorage.getItem('mspl_payslip_format');
     const defaultAddress = "H.no.1-8-1, North Kamala Nagar, Beside Near ETDC Building, ECIL, Hyderabad, Telangana-500062. Email.id: hr@magnifiq.in";
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        if (parsed.companyAddress && parsed.companyAddress.includes("Vidya Nagar")) {
-          parsed.companyAddress = defaultAddress;
-        } else {
-          parsed.companyAddress = defaultAddress;
-        }
-        return parsed;
-      } catch {}
-    }
     return {
       companyName: "Magnifiq Services Private Limited",
       companyAddress: defaultAddress,
@@ -178,70 +135,38 @@ export default function App() {
     };
   });
 
-  const [employeeQueries, setEmployeeQueries] = useState<EmployeeHelpQuery[]>(() => {
-    const saved = localStorage.getItem('mspl_employee_queries');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch {}
+  const [employeeQueries, setEmployeeQueries] = useState<EmployeeHelpQuery[]>([
+    {
+      id: "q-1",
+      employeeId: "MSPL-EMP-101",
+      employeeName: "Ajay Kumar",
+      projectName: "Indus Guntur Tower Erection Scope",
+      priority: "urgent",
+      queryText: "Need high-tension climbing rigging kit. Currently working at 45m elevation on Guntur municipal lines. Local field lead is out of station.",
+      submittedAt: "05/24/2026 02:45 PM",
+      status: "pending"
+    },
+    {
+      id: "q-2",
+      employeeId: "MSPL-EMP-102",
+      employeeName: "Ramesh Shinde",
+      projectName: "Vijayawada Jio Backbone OFC Fusion",
+      priority: "normal",
+      queryText: "Fusion splicer battery calibration failed. Requesting replacement buffer pack to prevent task timeline delays.",
+      submittedAt: "05/23/2026 11:30 AM",
+      status: "resolved",
+      hrResponse: "Approved backup battery pack dispatch from Guntur warehouse on site van. Scheduled delivery within 24 hours.",
+      hrRespondedAt: "05/23/2026 04:30 PM"
     }
-    return [
-      {
-        id: "q-1",
-        employeeId: "MSPL-EMP-101",
-        employeeName: "Ajay Kumar",
-        projectName: "Indus Guntur Tower Erection Scope",
-        priority: "urgent",
-        queryText: "Need high-tension climbing rigging kit. Currently working at 45m elevation on Guntur municipal lines. Local field lead is out of station.",
-        submittedAt: "05/24/2026 02:45 PM",
-        status: "pending"
-      },
-      {
-        id: "q-2",
-        employeeId: "MSPL-EMP-102",
-        employeeName: "Ramesh Shinde",
-        projectName: "Vijayawada Jio Backbone OFC Fusion",
-        priority: "normal",
-        queryText: "Fusion splicer battery calibration failed. Requesting replacement buffer pack to prevent task timeline delays.",
-        submittedAt: "05/23/2026 11:30 AM",
-        status: "resolved",
-        hrResponse: "Approved backup battery pack dispatch from Guntur warehouse on site van. Scheduled delivery within 24 hours.",
-        hrRespondedAt: "05/23/2026 04:30 PM"
-      }
-    ];
-  });
+  ]);
 
   // --- Managing Director Auth State ---
-  const [isDirectorLoggedIn, setIsDirectorLoggedIn] = useState(() => {
-    return localStorage.getItem('mspl_director_logged_in') === 'true';
-  });
+  const [isDirectorLoggedIn, setIsDirectorLoggedIn] = useState(false);
 
   // Current Logged In Employee
-  const [currentEmployee, setCurrentEmployee] = useState<Employee | null>(() => {
-    const saved = localStorage.getItem('mspl_current_employee');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch {}
-    }
-    return null;
-  });
+  const [currentEmployee, setCurrentEmployee] = useState<Employee | null>(null);
 
-  useEffect(() => {
-    localStorage.setItem('mspl_employees', JSON.stringify(employees));
-  }, [employees]);
-
-  useEffect(() => {
-    localStorage.setItem('mspl_payslips', JSON.stringify(payslips));
-  }, [payslips]);
-
-  useEffect(() => {
-    if (currentEmployee) {
-      localStorage.setItem('mspl_current_employee', JSON.stringify(currentEmployee));
-    } else {
-      localStorage.removeItem('mspl_current_employee');
-    }
-  }, [currentEmployee]);
+  // Data is now synced from Firebase, no need for localStorage
 
   // Client Portal Access Guard
   const [showClientAccessModal, setShowClientAccessModal] = useState(false);
@@ -301,6 +226,55 @@ export default function App() {
       ).catch(err => console.error('Error syncing data to Firebase:', err));
     }
   }, [employees, attendanceLogs, payslips, inventory, payslipFormat, employeeQueries]);
+
+  // ============ RESTORE DIRECTOR LOGIN STATUS FROM FIREBASE ============
+  useEffect(() => {
+    const restoreDirectorLoginStatus = async () => {
+      try {
+        const isLoggedIn = await preferencesService.getDirectorLoginStatus('HR-001');
+        if (isLoggedIn) {
+          setIsDirectorLoggedIn(true);
+        }
+      } catch (error) {
+        console.error('Error loading director login status:', error);
+      }
+    };
+
+    restoreDirectorLoginStatus();
+  }, []);
+
+  // ============ RESTORE CURRENT EMPLOYEE FROM FIREBASE ============
+  useEffect(() => {
+    const restoreCurrentEmployee = async () => {
+      try {
+        const employee = await preferencesService.getCurrentEmployee('HR-001');
+        if (employee) {
+          setCurrentEmployee(employee);
+        }
+      } catch (error) {
+        console.error('Error loading current employee:', error);
+      }
+    };
+
+    restoreCurrentEmployee();
+  }, []);
+
+  // ============ PERSIST CURRENT EMPLOYEE TO FIREBASE ============
+  useEffect(() => {
+    const persistCurrentEmployee = async () => {
+      try {
+        if (currentEmployee) {
+          await preferencesService.setCurrentEmployee('HR-001', currentEmployee);
+        } else {
+          await preferencesService.clearCurrentEmployee('HR-001');
+        }
+      } catch (error) {
+        console.error('Error persisting current employee:', error);
+      }
+    };
+
+    persistCurrentEmployee();
+  }, [currentEmployee]);
 
   // ============ PERSIST THEME TO LOCALSTORAGE (ONLY UI PREFERENCE) ============
 

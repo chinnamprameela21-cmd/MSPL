@@ -13,6 +13,8 @@ import {
   employeeQueriesService,
   careerService
 } from '../lib/firebaseService';
+import { preferencesService } from '../lib/firebasePreferencesService';
+import { useAuth } from '../context/AuthContext';
 
 interface HrPortalProps {
   employees: Employee[];
@@ -750,7 +752,7 @@ export default function HrPortal({
   };
 
   // Handle HR Login
-  const handleHrLogin = (e: React.FormEvent) => {
+  const handleHrLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!hrId || !hrPassword) {
@@ -759,9 +761,16 @@ export default function HrPortal({
     }
     
     if (hrId === 'HR-001' && hrPassword === 'hr123') {
-      setIsDirectorLoggedIn(true);
-      localStorage.setItem('mspl_director_logged_in', 'true');
-      toast('HR Login successful!', 'success');
+      try {
+        // Save director login status to Firebase
+        await preferencesService.setDirectorLoginStatus('HR-001', true);
+        setIsDirectorLoggedIn(true);
+        toast('HR Login successful!', 'success');
+      } catch (error) {
+        console.error('Error saving login status:', error);
+        toast('Login successful but failed to save preference. Reload to re-login.', 'warning');
+        setIsDirectorLoggedIn(true);
+      }
     } else {
       toast('Invalid HR credentials. Please try again.', 'error');
     }
@@ -845,9 +854,14 @@ export default function HrPortal({
       {/* Logout Button */}
       <div className="flex justify-end">
         <button
-          onClick={() => {
+          onClick={async () => {
+            try {
+              // Remove director login status from Firebase
+              await preferencesService.setDirectorLoginStatus('HR-001', false);
+            } catch (error) {
+              console.error('Error removing login status:', error);
+            }
             setIsDirectorLoggedIn(false);
-            localStorage.removeItem('mspl_director_logged_in');
             toast('Logged out successfully.', 'info');
           }}
           className="px-4 py-2 bg-rose-500 hover:bg-rose-600 text-white rounded-lg text-sm font-bold transition"
