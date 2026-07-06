@@ -440,10 +440,9 @@ export default function App() {
     };
     
     try {
-      // Save to Firebase
+      // Save to Firebase (Firebase listener will automatically update local state)
       await attendanceService.createAttendanceLog(newLog);
-      // Update local state
-      setAttendanceLogs(prev => [newLog, ...prev]);
+      triggerToast('Attendance marked successfully!', 'success');
     } catch (error) {
       console.error('Error recording attendance:', error);
       triggerToast('Failed to record attendance. Please try again.', 'error');
